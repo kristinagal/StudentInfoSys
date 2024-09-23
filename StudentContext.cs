@@ -28,7 +28,7 @@ public class StudentContext : DbContext
         modelBuilder.Entity<Lecture>()
             .HasMany(l => l.Departments)
             .WithMany(d => d.Lectures)
-            .UsingEntity<Dictionary<string, object>>(
+            .UsingEntity<Dictionary<string, object>>( // join table for many to many relationships
                 "DepartmentLecture",
                 j => j.HasOne<Department>().WithMany().HasForeignKey("DepartmentCode"),
                 j => j.HasOne<Lecture>().WithMany().HasForeignKey("LectureId"));
