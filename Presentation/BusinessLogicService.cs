@@ -20,21 +20,29 @@ namespace StudentInfoSys.UserInterface
             _validationsService = validationsService;
         }
 
-        // This method handles all user inputs
-        // Func<string, Result> validationMethod - method from ValidationsService with structure "public Result MethodName(string userInput)"
-        // Result - model class with properties Success and Message.
-        public string? GetValidUserInput(Func<string, Result> validationMethod, string prompt) 
-        // prints out prompt and asks for input until valid answer is received
+        // Method to get valid user input with exit option
+        public string? GetValidUserInput(Func<string, Result> validationMethod, string prompt)
         {
+            Console.WriteLine($"Type 0 to exit.");
+
             while (true)
             {
                 Console.Write(prompt);
                 var userInput = Console.ReadLine().Trim();
+
+                // Check if user wants to exit
+                if (userInput == "0")
+                {
+                    return null;
+                }
+
                 var result = validationMethod(userInput);
                 if (result.Success)
                 {
-                    return userInput;
+                    return userInput; // Return valid input
                 }
+
+                // Display validation failure message
                 Console.WriteLine(result.Message);
             }
         }
@@ -47,12 +55,18 @@ namespace StudentInfoSys.UserInterface
             Console.WriteLine();
             Console.WriteLine("To create new student please enter");
 
-            // getting all needed values
             var firstName = GetValidUserInput(_validationsService.GetValidName, "First name: ");
             var lastName = GetValidUserInput(_validationsService.GetValidName, "Last name: ");
             var studentNumber = GetValidUserInput(_validationsService.GetValidStudentNumber, "Student number: ");
             var email = GetValidUserInput(_validationsService.GetValidEmail, "Email: ");
             var departmentCode = GetValidUserInput(_validationsService.GetExistingDepartmentCode, "Department code: ");
+
+            // If any input is null, exit the method
+            if (firstName == null || lastName == null || studentNumber == null || email == null || departmentCode == null)
+            {
+                Console.WriteLine("Operation canceled.");
+                return;
+            }
 
             var student = new Student
             {
@@ -75,9 +89,11 @@ namespace StudentInfoSys.UserInterface
             Console.WriteLine("---> Change department");
             Console.WriteLine();
             Console.WriteLine("To change student's department please enter");
-            var studentNumber = GetValidUserInput(_validationsService.GetValidStudentNumber, "Student number: ");
-            var student = _studentRepo.GetStudentByNumber(int.Parse(studentNumber));
 
+            var studentNumber = GetValidUserInput(_validationsService.GetValidStudentNumber, "Student number: ");
+            if (studentNumber == null) return;
+
+            var student = _studentRepo.GetStudentByNumber(int.Parse(studentNumber));
             if (student == null)
             {
                 Console.WriteLine("Student not found.");
@@ -85,10 +101,10 @@ namespace StudentInfoSys.UserInterface
             }
 
             var newDepartmentCode = GetValidUserInput(_validationsService.GetExistingDepartmentCode, "New department code: ");
+            if (newDepartmentCode == null) return;
+
             student.DepartmentCode = newDepartmentCode;
             _studentRepo.UpdateStudent(student);
-
-            // Reassign lectures based on the new department
             _studentRepo.ReassignLecturesByDepartment(student);
 
             Console.WriteLine("Student's department and lectures changed successfully.");
@@ -104,8 +120,9 @@ namespace StudentInfoSys.UserInterface
             Console.WriteLine("To add lecture to student please enter");
 
             var studentNumber = GetValidUserInput(_validationsService.GetValidStudentNumber, "Student number: ");
-            var student = _studentRepo.GetStudentByNumber(int.Parse(studentNumber));
+            if (studentNumber == null) return;
 
+            var student = _studentRepo.GetStudentByNumber(int.Parse(studentNumber));
             if (student == null)
             {
                 Console.WriteLine("Student not found.");
@@ -113,15 +130,15 @@ namespace StudentInfoSys.UserInterface
             }
 
             var lectureId = GetValidUserInput(_validationsService.GetExistingLectureId, "Lecture Id: ");
-            var lecture = _lectureRepo.GetLectureById(int.Parse(lectureId));
+            if (lectureId == null) return;
 
+            var lecture = _lectureRepo.GetLectureById(int.Parse(lectureId));
             if (lecture == null)
             {
                 Console.WriteLine("Lecture not found.");
                 return;
             }
 
-            // Call the department check method before assigning the lecture
             var departmentResult = _validationsService.IsStudentInLectureDepartment(student, lecture);
             if (!departmentResult.Success)
             {
@@ -129,7 +146,6 @@ namespace StudentInfoSys.UserInterface
                 return;
             }
 
-            // Call the conflict check before adding the lecture
             var conflictResult = _validationsService.CheckStudentLectureConflicts(student.StudentNumber, lecture.LectureStartTime, lecture.LectureEndTime, lecture.Weekday);
             if (!conflictResult.Success)
             {
@@ -137,13 +153,10 @@ namespace StudentInfoSys.UserInterface
                 return;
             }
 
-            // If both validations pass, add the lecture to the student and save the changes
             _studentRepo.AddLectureToStudent(student.StudentNumber, lecture);
-
             Console.WriteLine("Lecture added to student successfully.");
             Console.ReadKey();
         }
-
 
         // Method to remove a lecture from a student
         public void RemoveLectureFromStudent()
@@ -152,9 +165,11 @@ namespace StudentInfoSys.UserInterface
             Console.WriteLine("---> Remove lecture");
             Console.WriteLine();
             Console.WriteLine("To remove lecture from student please enter");
-            var studentNumber = GetValidUserInput(_validationsService.GetExistingStudentNumber, "Student number: ");
-            var student = _studentRepo.GetStudentByNumber(int.Parse(studentNumber));
 
+            var studentNumber = GetValidUserInput(_validationsService.GetExistingStudentNumber, "Student number: ");
+            if (studentNumber == null) return;
+
+            var student = _studentRepo.GetStudentByNumber(int.Parse(studentNumber));
             if (student == null)
             {
                 Console.WriteLine("Student not found.");
@@ -162,8 +177,9 @@ namespace StudentInfoSys.UserInterface
             }
 
             var lectureId = GetValidUserInput(_validationsService.GetExistingLectureId, "Lecture Id: ");
-            var lecture = student.Lectures.FirstOrDefault(l => l.LectureId == int.Parse(lectureId));
+            if (lectureId == null) return;
 
+            var lecture = student.Lectures.FirstOrDefault(l => l.LectureId == int.Parse(lectureId));
             if (lecture == null)
             {
                 Console.WriteLine("Lecture not found for this student.");
@@ -176,7 +192,7 @@ namespace StudentInfoSys.UserInterface
             Console.ReadKey();
         }
 
-        // Method to display all lectures for a student, including time and weekday
+        // Method to display all lectures for a student
         public void ShowStudentLectures()
         {
             Console.Clear();
@@ -184,8 +200,9 @@ namespace StudentInfoSys.UserInterface
             Console.WriteLine();
 
             var studentNumber = GetValidUserInput(_validationsService.GetExistingStudentNumber, "Student number: ");
-            var student = _studentRepo.GetStudentByNumber(int.Parse(studentNumber));
+            if (studentNumber == null) return;
 
+            var student = _studentRepo.GetStudentByNumber(int.Parse(studentNumber));
             if (student == null)
             {
                 Console.WriteLine("Student not found.");
@@ -213,7 +230,6 @@ namespace StudentInfoSys.UserInterface
             Console.ReadKey();
         }
 
-
         // Method to create a lecture
         public void CreateLecture()
         {
@@ -224,26 +240,43 @@ namespace StudentInfoSys.UserInterface
 
             var lectureName = GetValidUserInput(_validationsService.GetValidLectureName, "Lecture name: ");
             var startTime = GetValidUserInput(_validationsService.GetValidLectureStartTime, "Start time (hh:mm): ");
+
+            // If any input is null, exit the method early
+            if (lectureName == null || startTime == null)
+            {
+                Console.WriteLine("Operation canceled.");
+                return;
+            }
+
+            string? userInput;
             string? endTime = null;
             Result result;
+
+            Console.WriteLine($"Type 0 to exit.");
             do
             {
                 Console.Write("End time (hh:mm): ");
-                var userInput = Console.ReadLine().Trim();
+                userInput = Console.ReadLine().Trim();
                 result = _validationsService.GetValidLectureEndTime(userInput, TimeSpan.Parse(startTime));
                 if (result.Success)
                     endTime = userInput;
-                if (!result.Success)
+                else
                     Console.WriteLine(result.Message);
             }
-            while (!result.Success);
+            while (!result.Success || userInput == "0");
 
             var weekday = GetValidUserInput(_validationsService.GetValidLectureWeekday, "Weekday (Monday to Friday or blank): ");
-
             var departmentCode = GetValidUserInput(_validationsService.GetExistingDepartmentCode, "Department code: ");
+
+            if (weekday == null || departmentCode == null || endTime == null)
+            {
+                Console.WriteLine("Operation canceled.");
+                return;
+            }
+
             var department = _departmentRepo.GetDepartmentByCode(departmentCode);
 
-            Lecture lecture = new Lecture
+            var lecture = new Lecture
             {
                 LectureName = lectureName,
                 LectureStartTime = TimeSpan.Parse(startTime),
@@ -253,8 +286,6 @@ namespace StudentInfoSys.UserInterface
             };
 
             _lectureRepo.AddLecture(lecture);
-
-            // Automatically reassign lectures for all students in the department
             _studentRepo.ReassignLecturesForAllStudents();
 
             Console.WriteLine($"Lecture '{lectureName}' created successfully and added to department '{department.DepartmentName}'.");
@@ -268,9 +299,11 @@ namespace StudentInfoSys.UserInterface
             Console.WriteLine("---> Change department");
             Console.WriteLine();
             Console.WriteLine("To change lecture's department please enter");
-            var lectureId = GetValidUserInput(_validationsService.GetExistingLectureId, "Lecture Id: ");
-            var lecture = _lectureRepo.GetLectureById(int.Parse(lectureId));
 
+            var lectureId = GetValidUserInput(_validationsService.GetExistingLectureId, "Lecture Id: ");
+            if (lectureId == null) return;
+
+            var lecture = _lectureRepo.GetLectureById(int.Parse(lectureId));
             if (lecture == null)
             {
                 Console.WriteLine("Lecture not found.");
@@ -278,8 +311,9 @@ namespace StudentInfoSys.UserInterface
             }
 
             var departmentCode = GetValidUserInput(_validationsService.GetExistingDepartmentCode, "New department code: ");
-            var department = _departmentRepo.GetDepartmentByCode(departmentCode);
+            if (departmentCode == null) return;
 
+            var department = _departmentRepo.GetDepartmentByCode(departmentCode);
             if (department == null)
             {
                 Console.WriteLine("Department not found.");
@@ -300,8 +334,16 @@ namespace StudentInfoSys.UserInterface
             Console.WriteLine("---> Create department");
             Console.WriteLine();
             Console.WriteLine("To create new department please enter");
+
             var departmentCode = GetValidUserInput(_validationsService.GetValidDepartmentCode, "Department code: ");
             var departmentName = GetValidUserInput(_validationsService.GetValidDepartmentName, "Department name: ");
+
+            // If any input is null, exit the method early
+            if (departmentCode == null || departmentName == null)
+            {
+                Console.WriteLine("Operation canceled.");
+                return;
+            }
 
             var department = new Department
             {
@@ -320,9 +362,11 @@ namespace StudentInfoSys.UserInterface
             Console.Clear();
             Console.WriteLine("---> Show department’s students");
             Console.WriteLine();
-            var departmentCode = GetValidUserInput(_validationsService.GetExistingDepartmentCode, "Department code: ");
-            var department = _departmentRepo.GetDepartmentByCode(departmentCode);
 
+            var departmentCode = GetValidUserInput(_validationsService.GetExistingDepartmentCode, "Department code: ");
+            if (departmentCode == null) return;
+
+            var department = _departmentRepo.GetDepartmentByCode(departmentCode);
             if (department == null)
             {
                 Console.WriteLine("Department not found.");
@@ -343,9 +387,11 @@ namespace StudentInfoSys.UserInterface
             Console.Clear();
             Console.WriteLine("---> Show department’s lectures");
             Console.WriteLine();
-            var departmentCode = GetValidUserInput(_validationsService.GetExistingDepartmentCode, "Department code: ");
-            var department = _departmentRepo.GetDepartmentByCode(departmentCode);
 
+            var departmentCode = GetValidUserInput(_validationsService.GetExistingDepartmentCode, "Department code: ");
+            if (departmentCode == null) return;
+
+            var department = _departmentRepo.GetDepartmentByCode(departmentCode);
             if (department == null)
             {
                 Console.WriteLine("Department not found.");
@@ -359,8 +405,5 @@ namespace StudentInfoSys.UserInterface
             }
             Console.ReadKey();
         }
-
-        
-
     }
 }
