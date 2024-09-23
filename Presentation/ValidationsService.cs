@@ -38,9 +38,9 @@ namespace StudentInfoSys.Presentation
             return new Result(false, "Invalid input! Please enter a valid student number.");
         }
 
-        public Result GetValidName(string userInput) // 2-50 letters
+        public Result GetValidName(string userInput) // 2-50 letters, all letters
         {
-            if (userInput.Length >= 2 && userInput.Length <= 50 && userInput.All(char.IsLetter))
+            if (userInput.Length >= 2 && userInput.Length <= 50 && userInput.All(char.IsLetter)) 
             {
                 return new Result(true);
             }
