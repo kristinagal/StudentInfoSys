@@ -21,14 +21,14 @@ namespace StudentInfoSys.UserInterface
         }
 
         // Method to get valid user input with exit option
-        public string? GetValidUserInput(Func<string, Result> validationMethod, string prompt)
+        public string GetValidUserInput(Func<string, Result> validationMethod, string prompt)
         {
             Console.WriteLine($"Type 0 to exit.");
 
             while (true)
             {
                 Console.Write(prompt);
-                var userInput = Console.ReadLine().Trim();
+                string userInput = Console.ReadLine().Trim();
 
                 // Check if user wants to exit
                 if (userInput == "0")
